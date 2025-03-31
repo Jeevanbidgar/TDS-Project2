@@ -10,7 +10,8 @@ import subprocess
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 from app.utils.functions import *
-
+from app.utils.functions import transcribe_youtube_segment,generate_duckdb_query  # Import the missing function
+ # Import the missing function
 load_dotenv()
 
 AIPROXY_TOKEN = os.getenv("AIPROXY_TOKEN")
@@ -58,8 +59,7 @@ async def get_openai_response(question: str, file_path: Optional[str] = None) ->
         # If the result looks like a JSON object (starts with {), try to get the hash directly
         if result.startswith("{") and result.endswith("}"):
             try:
-                import httpx
-
+                # Using the global httpx import, not importing it locally
                 async with httpx.AsyncClient() as client:
                     response = await client.post(
                         "https://tools-in-data-science.pages.dev/api/hash",

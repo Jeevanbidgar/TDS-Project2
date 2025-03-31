@@ -915,7 +915,7 @@ def calculate_spreadsheet_formula(formula: str, type: str) -> str:
 
             # Extract SEQUENCE parameters
             sequence_pattern = (
-                r"SEQUENCE\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)"
+                r"SEQUENCE\s*\(\s*(\\d+)\s*,\s*(\\d+)\s*,\s*(\\d+)\s*,\s*(\\d+)\s*\)"
             )
             match = re.search(sequence_pattern, formula)
 
@@ -939,7 +939,7 @@ def calculate_spreadsheet_formula(formula: str, type: str) -> str:
 
             # Extract ARRAY_CONSTRAIN parameters
             # Fix the regex pattern to properly capture the SEQUENCE part
-            constrain_pattern = r"ARRAY_CONSTRAIN\s*\(\s*SEQUENCE\s*\([^)]+\)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)"
+            constrain_pattern = r"ARRAY_CONSTRAIN\s*\(\s*SEQUENCE\s*\([^)]+\)\s*,\s*(\\d+)\s*,\s*(\\d+)\s*\)"
             constrain_match = re.search(constrain_pattern, formula)
 
             if not constrain_match:
@@ -984,7 +984,7 @@ def calculate_spreadsheet_formula(formula: str, type: str) -> str:
                 sorted_values = [pair[0] for pair in sorted_pairs]
 
                 # Check for TAKE function
-                take_pattern = r"TAKE\([^,]+,\s*(\d+),\s*(\d+)\)"
+                take_pattern = r"TAKE\([^,]+,\s*(\\d+),\s*(\\d+)\)"
                 take_match = re.search(take_pattern, formula)
 
                 if take_match:
@@ -2342,11 +2342,11 @@ app.add_middleware(
 @app.get("/execute")
 async def execute_query(q: str):
     # Define regex patterns for each function
-    ticket_pattern = r"status of ticket (\d+)"
-    meeting_pattern = r"Schedule a meeting on (\d{4}-\d{2}-\d{2}) at (\d{2}:\d{2}) in (Room \w+)"
-    expense_pattern = r"expense balance for employee (\d+)"
-    bonus_pattern = r"Calculate performance bonus for employee (\d+) for (\d{4})"
-    issue_pattern = r"Report office issue (\d+) for the (\w+) department"
+    ticket_pattern = r"status of ticket (\\d+)"
+    meeting_pattern = r"Schedule a meeting on (\\d{4}-\\d{2}-\\d{2}) at (\\d{2}:\\d{2}) in (Room \\w+)"
+    expense_pattern = r"expense balance for employee (\\d+)"
+    bonus_pattern = r"Calculate performance bonus for employee (\\d+) for (\\d{4})"
+    issue_pattern = r"Report office issue (\\d+) for the (\\w+) department"
     
     # Check each pattern and extract parameters
     if re.search(ticket_pattern, q):
@@ -3380,7 +3380,7 @@ async def analyze_apache_logs(
                     # Parse the time string
                     # Format: [01/May/2024:00:00:00 +0000]
                     time_match = re.match(
-                        r"\[(\d+)/(\w+)/(\d+):(\d+):(\d+):(\d+) ([+-]\d+)\]", time_str
+                        r"\[(\\d+)/(\\w+)/(\\d+):(\\d+):(\\d+):(\\d+) ([+-]\\d+)\]", time_str
                     )
                     if not time_match:
                         parsing_errors += 1
@@ -3613,7 +3613,7 @@ async def analyze_bandwidth_by_ip(
                     # Parse the time string
                     # Format: [01/May/2024:00:00:00 +0000]
                     time_match = re.match(
-                        r"\[(\d+)/(\w+)/(\d+):(\d+):(\d+):(\d+) ([+-]\d+)\]", time_str
+                        r"\[(\\d+)/(\\w+)/(\\d+):(\\d+):(\\d+):(\\d+) ([+-]\\d+)\]", time_str
                     )
                     if not time_match:
                         parsing_errors += 1
@@ -3783,7 +3783,7 @@ async def parse_partial_json_sales(file_path: str) -> str:
 
         # Regular expression to extract sales values
         # This pattern looks for "sales":number or "sales": number
-        sales_pattern = r'"sales"\s*:\s*(\d+\.?\d*)'
+        sales_pattern = r'"sales"\s*:\s*(\\d+\\.?\\d*)'
 
         with open(file_path, "r", encoding="utf-8") as file:
             for line in file:
@@ -4084,3 +4084,218 @@ async def analyze_sales_with_phonetic_clustering(
         import traceback
 
         return f"Error analyzing sales data: {str(e)}\n{traceback.format_exc()}"
+
+
+async def transcribe_youtube_segment(
+    youtube_url: str,
+    start_time: float,
+    end_time: float,
+) -> str:
+    """
+    Extract audio from a YouTube video segment and transcribe it
+    
+    Args:
+        youtube_url: URL of the YouTube video
+        start_time: Start time in seconds
+        end_time: End time in seconds
+        
+    Returns:
+        Transcription of the audio segment
+    """
+    try:
+        import tempfile
+        import os
+        import subprocess
+        import json
+        
+        # Create a temporary directory
+        temp_dir = tempfile.mkdtemp()
+        audio_file = os.path.join(temp_dir, "audio_segment.mp3")
+        
+        try:
+            # Use youtube-dl to download the audio segment
+            download_cmd = [
+                "youtube-dl",
+                "--extract-audio",
+                "--audio-format", "mp3",
+                "--audio-quality", "0",
+                "--postprocessor-args", f"-ss {start_time} -to {end_time}",
+                "-o", audio_file,
+                youtube_url
+            ]
+            
+            subprocess.run(download_cmd, check=True, capture_output=True)
+            
+            # Use a mock transcription since we can't actually call OpenAI's Whisper API
+            return f"""
+# YouTube Segment Transcription
+
+## Video Information
+- **URL**: {youtube_url}
+- **Segment**: {start_time}s to {end_time}s
+- **Duration**: {end_time - start_time}s
+
+## Transcription
+This is a simulated transcription of the YouTube video segment.
+The actual implementation would use OpenAI's Whisper API or another
+speech-to-text service to transcribe the extracted audio.
+
+## Usage Example
+```python
+transcript = await transcribe_youtube_segment(
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    30,
+    60
+)
+```
+"""
+            
+        finally:
+            # Clean up temporary files
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            
+    except Exception as e:
+        import traceback
+        return f"Error transcribing YouTube segment: {str(e)}\n{traceback.format_exc()}"
+
+
+async def generate_duckdb_query(
+    query_type: str,
+    timestamp_filter: str = None,
+    numeric_filter: int = None,
+    sort_order: str = None
+) -> str:
+    """
+    Generate and format DuckDB SQL queries for various data analysis tasks
+    
+    Args:
+        query_type: Type of query to generate (e.g., 'post_comments', 'user_activity')
+        timestamp_filter: ISO timestamp for filtering data (e.g., '2025-02-26T00:17:09.465Z')
+        numeric_filter: Numeric threshold for filtering (e.g., 5 for star count)
+        sort_order: Sort order for results ('ASC' or 'DESC')
+        
+    Returns:
+        Formatted DuckDB SQL query
+    """
+    try:
+        # Set default values if not provided
+        if sort_order is None:
+            sort_order = "DESC"
+        
+        if numeric_filter is None:
+            numeric_filter = 5
+            
+        # Format timestamp if provided
+        timestamp_condition = ""
+        if timestamp_filter:
+            timestamp_condition = f"AND created_at > '{timestamp_filter}'"
+            
+        # Generate query based on type
+        if query_type == "post_comments":
+            query = f"""
+SELECT 
+    p.id AS post_id,
+    p.title,
+    COUNT(c.id) AS comment_count
+FROM 
+    posts p
+LEFT JOIN 
+    comments c ON p.id = c.post_id
+WHERE 
+    p.stars >= {numeric_filter}
+    {timestamp_condition}
+GROUP BY 
+    p.id, p.title
+ORDER BY 
+    comment_count {sort_order}
+LIMIT 10
+"""
+        elif query_type == "user_activity":
+            query = f"""
+SELECT 
+    u.username,
+    COUNT(p.id) AS post_count,
+    COUNT(c.id) AS comment_count,
+    SUM(p.stars) AS total_stars
+FROM 
+    users u
+LEFT JOIN 
+    posts p ON u.id = p.user_id
+LEFT JOIN 
+    comments c ON u.id = c.user_id
+WHERE 
+    u.active = true
+    {timestamp_condition}
+GROUP BY 
+    u.username
+HAVING 
+    (COUNT(p.id) + COUNT(c.id)) >= {numeric_filter}
+ORDER BY 
+    total_stars {sort_order}
+LIMIT 10
+"""
+        elif query_type == "trending_tags":
+            query = f"""
+SELECT 
+    t.name AS tag_name,
+    COUNT(pt.post_id) AS post_count,
+    AVG(p.stars) AS avg_stars
+FROM 
+    tags t
+JOIN 
+    post_tags pt ON t.id = pt.tag_id
+JOIN 
+    posts p ON pt.post_id = p.id
+WHERE 
+    p.stars >= {numeric_filter}
+    {timestamp_condition}
+GROUP BY 
+    t.name
+ORDER BY 
+    avg_stars {sort_order}, post_count {sort_order}
+LIMIT 10
+"""
+        else:
+            return f"Unsupported query type: {query_type}"
+            
+        # Format the query for readability
+        formatted_query = query.strip()
+        
+        # Add documentation with usage examples
+        documentation = f"""
+# DuckDB Query Generator
+
+## Query Type: {query_type}
+The generated query finds {query_type.replace('_', ' ')} with appropriate filtering and sorting.
+
+## Parameters Used
+- Numeric Filter: {numeric_filter}
+- Timestamp Filter: {timestamp_filter if timestamp_filter else 'None'}
+- Sort Order: {sort_order}
+
+## Generated SQL Query
+```sql
+{formatted_query}
+```
+
+## Example Usage
+```python
+import duckdb
+
+# Connect to your database
+conn = duckdb.connect('your_database.db')
+
+# Execute the query
+results = conn.execute('''{formatted_query}''').fetchall()
+
+# Process results
+for row in results:
+    print(row)
+```
+"""
+        return documentation
+        
+    except Exception as e:
+        import traceback
+        return f"Error generating DuckDB query: {str(e)}\n{traceback.format_exc()}"
